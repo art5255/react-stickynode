@@ -7,7 +7,6 @@
     "build": "grunt dist",
     "devtest": "grunt unit",
     "func": "./tests/functional/saucelabs.sh",
-    "lint": "eslint --cache --ext .js,.jsx . --fix",
     "prepublish": "grunt dist",
     "test": "grunt cover"
   },
@@ -37,6 +36,7 @@
   },
   "devDependencies": {
     "babel": "^5.0.0",
+    "babel-eslint": "^10.0.1",
     "babel-loader": "^5.0.0",
     "coveralls": "^2.11.1",
     "es5-shim": "^4.0.0",
@@ -73,7 +73,6 @@
     "react-dom": "^0.14.2 || ^15.0.0 || ^16.0.0"
   },
   "precommit": [
-    "lint",
     "test"
   ],
   "license": "BSD-3-Clause"

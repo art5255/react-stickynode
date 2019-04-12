@@ -18,17 +18,17 @@ const STATUS_ORIGINAL = 0; // The default status, locating at the original posit
 const STATUS_RELEASED = 1; // The released status, locating at somewhere on document but not default one.
 const STATUS_FIXED = 2; // The sticky status, locating fixed to the top or the bottom of screen.
 
-var TRANSFORM_PROP = 'transform';
+let TRANSFORM_PROP = 'transform';
 
 // global variable for all instances
-var doc;
-var docBody;
-var docEl;
-var canEnableTransforms = true; // Use transform by default, so no Sticky on lower-end browser when no Modernizr
-var M;
-var scrollDelta = 0;
-var win;
-var winHeight = -1;
+let doc;
+let docBody;
+let docEl;
+let canEnableTransforms = true; // Use transform by default, so no Sticky on lower-end browser when no Modernizr
+let M;
+let scrollDelta = 0;
+let win;
+let winHeight = -1;
 
 class Sticky extends Component {
     constructor (props, context) {
@@ -43,9 +43,9 @@ class Sticky extends Component {
         this.skipNextScrollEvent = false;
         this.scrollTop = -1;
 
-        this.bottomBoundaryTarget;
-        this.topTarget;
-        this.subscribers;
+        this.bottomBoundaryTarget = null;
+        this.topTarget = null;
+        this.subscribers = null;
 
         this.state = {
             top: 0, // A top offset from viewport top where Sticky sticks to when scrolling up
@@ -62,7 +62,7 @@ class Sticky extends Component {
         };
     }
 
-    getTargetHeight (target) {
+    static getTargetHeight (target) {
         return target && target.offsetHeight || 0;
     }
 
@@ -83,13 +83,13 @@ class Sticky extends Component {
         if (!target) {
             return -1;
         }
-        var rect = target.getBoundingClientRect();
+        const rect = target.getBoundingClientRect();
         return this.scrollTop + rect.bottom;
     }
 
     getBottomBoundary (bottomBoundary) {
         // a bottomBoundary can be provided to avoid reading from the props
-        var boundary = bottomBoundary || this.props.bottomBoundary;
+        let boundary = bottomBoundary || this.props.bottomBoundary;
 
         // TODO, bottomBoundary was an object, depricate it later.
         if (typeof boundary === 'object') {
@@ -130,17 +130,16 @@ class Sticky extends Component {
      * Update the initial position, width, and height. It should update whenever children change.
      * @param {Object} options optional top and bottomBoundary new values
      */
-    updateInitialDimension (options) {
-        options = options || {}
+    updateInitialDimension (options = {}) {
 
-        var outerRect = this.outerElement.getBoundingClientRect();
-        var innerRect = this.innerElement.getBoundingClientRect();
+        const outerRect = this.outerElement.getBoundingClientRect();
+        const innerRect = this.innerElement.getBoundingClientRect();
 
-        var width = outerRect.width || outerRect.right - outerRect.left;
-        var height = innerRect.height || innerRect.bottom - innerRect.top;;
-        var outerY = outerRect.top + this.scrollTop;
+        const width = outerRect.width || outerRect.right - outerRect.left;
+        const height = innerRect.height || innerRect.bottom - innerRect.top;
+        const outerY = outerRect.top + this.scrollTop;
 
-        this.setState({
+        return new Promise((resolve) => this.setState({
             top: this.getTopPosition(options.top),
             bottom: Math.min(this.state.top + height, winHeight),
             width: width,
@@ -149,17 +148,21 @@ class Sticky extends Component {
             y: outerY,
             bottomBoundary: this.getBottomBoundary(options.bottomBoundary),
             topBoundary: outerY
-        });
+        }, resolve));
     }
 
+    async updateWithDimensions (props = {}) {
+        await this.updateInitialDimension(props);
+        this.update();    
+    }
+    
     handleResize (e, ae) {
         if (this.props.shouldFreeze()) {
             return;
         }
 
         winHeight = ae.resize.height;
-        this.updateInitialDimension();
-        this.update();
+        this.updateWithDimensions();
     }
 
     handleScrollStart (e, ae) {
@@ -195,7 +198,7 @@ class Sticky extends Component {
      * Update Sticky position.
      */
     update () {
-        var disabled = !this.props.enabled ||
+        const disabled = !this.props.enabled ||
             this.state.bottomBoundary - this.state.topBoundary <= this.state.height ||
             (this.state.width === 0 && this.state.height === 0);
 
@@ -206,11 +209,11 @@ class Sticky extends Component {
             return;
         }
 
-        var delta = scrollDelta;
+        const delta = scrollDelta;
         // "top" and "bottom" are the positions that this.state.top and this.state.bottom project
         // on document from viewport.
-        var top = this.scrollTop + this.state.top;
-        var bottom = this.scrollTop + this.state.bottom;
+        const top = this.scrollTop + this.state.top;
+        const bottom = this.scrollTop + this.state.bottom;
 
         // There are 2 principles to make sure Sticky won't get wrong so much:
         // 1. Reset Sticky to the original postion when "top" <= topBoundary
@@ -232,6 +235,7 @@ class Sticky extends Component {
                         // Commentting out "break" is on purpose, because there is a chance to transit to FIXED
                         // from ORIGINAL when calling window.scrollTo().
                         // break;
+                    // eslint-disable-next-line no-fallthrough
                     case STATUS_RELEASED:
                         // If "top" and "bottom" are inbetween stickyTop and stickyBottom, then Sticky is in
                         // RELEASE status. Otherwise, it changes to FIXED status, and its bottom sticks to
@@ -243,10 +247,11 @@ class Sticky extends Component {
                             this.fix(this.state.top);
                         }
                         break;
+                    // eslint-disable-next-line no-case-declarations
                     case STATUS_FIXED:
-                        var toRelease = true;
-                        var pos = this.state.pos;
-                        var height = this.state.height;
+                        let toRelease = true;
+                        const pos = this.state.pos;
+                        const height = this.state.height;
                         // In regular cases, when Sticky is in FIXED status,
                         // 1. it's top will stick to the screen top,
                         // 2. it's bottom will stick to the screen bottom,
@@ -261,7 +266,7 @@ class Sticky extends Component {
                             // This case only happens when Sticky's bottom sticks to the screen bottom and
                             // its height gets changed. Sticky should be in RELEASE status and update its
                             // sticky bottom by calculating how much height it changed.
-                            var deltaHeight = (pos + height - this.state.bottom);
+                            const deltaHeight = (pos + height - this.state.bottom);
                             this.stickyBottom = bottom - delta + deltaHeight;
                             this.stickyTop = this.stickyBottom - height;
                         } else {
@@ -283,8 +288,7 @@ class Sticky extends Component {
     }
 
     componentWillReceiveProps (nextProps) {
-        this.updateInitialDimension(nextProps);
-        this.update();
+        this.updateWithDimensions(nextProps);
     }
 
     componentDidUpdate(prevProps, prevState) {
@@ -295,8 +299,7 @@ class Sticky extends Component {
         if (prevProps.enabled !== this.props.enabled) {
             if (this.props.enabled) {
                 this.setState({activated: true}, () => {
-                    this.updateInitialDimension();
-                    this.update();
+                    this.updateWithDimensions();
                 });
             } else {
                 this.setState({activated: false}, () => {
@@ -307,8 +310,8 @@ class Sticky extends Component {
     }
 
     componentWillUnmount () {
-        var subscribers = this.subscribers || [];
-        for (var i = subscribers.length - 1; i >= 0; i--) {
+        const subscribers = this.subscribers || [];
+        for (let i = subscribers.length - 1; i >= 0; i--) {
             this.subscribers[i].unsubscribe();
         }
     }
@@ -335,8 +338,7 @@ class Sticky extends Component {
 
         if (this.props.enabled) {
             this.setState({activated: true});
-            this.updateInitialDimension();
-            this.update();
+            this.updateWithDimensions();
         }
         // bind the listeners regardless if initially enabled - allows the component to toggle sticky functionality
         this.subscribers = [
@@ -347,7 +349,7 @@ class Sticky extends Component {
     }
 
     translate (style, pos) {
-        var enableTransforms = canEnableTransforms && this.props.enableTransforms
+        const enableTransforms = canEnableTransforms && this.props.enableTransforms;
         if (enableTransforms && this.state.activated) {
             style[TRANSFORM_PROP] = 'translate3d(0,' + Math.round(pos) + 'px,0)';
         } else {
@@ -361,12 +363,12 @@ class Sticky extends Component {
 
     render () {
         // TODO, "overflow: auto" prevents collapse, need a good way to get children height
-        var innerStyle = {
+        const innerStyle = {
             position: this.state.status === STATUS_FIXED ? 'fixed' : 'relative',
             top: this.state.status === STATUS_FIXED ? '0px' : '',
             zIndex: this.props.innerZ
         };
-        var outerStyle = {};
+        const outerStyle = {};
 
         // always use translate3d to enhance the performance
         this.translate(innerStyle, this.state.pos);
@@ -375,12 +377,12 @@ class Sticky extends Component {
             outerStyle.height = this.state.height + 'px';
         }
 
-        var outerClasses = classNames('sticky-outer-wrapper', this.props.className, {
+        const outerClasses = classNames('sticky-outer-wrapper', this.props.className, {
             [this.props.activeClass]: this.state.status === STATUS_FIXED,
             [this.props.releasedClass]: this.state.status === STATUS_RELEASED
-        })
+        });
 
-        var children = this.props.children;
+        const children = this.props.children;
 
         return (
             <div ref={(outer) => { this.outerElement = outer; }} className={outerClasses} style={outerStyle}>
@@ -406,7 +408,7 @@ Sticky.defaultProps = {
 };
 
 /**
- * @param {Bool} enabled A switch to enable or disable Sticky.
+ * @param {Boolean} enabled A switch to enable or disable Sticky.
  * @param {String/Number} top A top offset px for Sticky. Could be a selector representing a node
  *        whose height should serve as the top offset.
  * @param {String/Number} bottomBoundary A bottom boundary px on document where Sticky will stop.

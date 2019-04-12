@@ -1,15 +1,18 @@
----
-plugins:
-  - "react"
-env: {
-    es6: true
-}
-parserOptions: {
-    sourceType: "module",
-    ecmaFeatures: {
-        jsx: true
+{
+    "extends": [
+        "eslint:recommended",
+        "plugin:react/recommended"
+    ],
+    "parserOptions": {
+        "ecmaVersion": 7,
+        "sourceType": "module",
+        "allowImportExportEverywhere": false,
+        "codeFrame": false
+    },
+    "env": {
+        "browser": true,
+        "node": true,
+        "jquery": true,
+        "es6": true
     }
 }
-rules:
-  valid-jsdoc: [2, { "requireReturn": false }]
-  'react/jsx-uses-react': [1]
